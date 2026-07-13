@@ -162,7 +162,8 @@
     color:#fff; background:linear-gradient(135deg,var(--steel),var(--steel-dark)); padding:5px 11px; border-radius:20px; margin-bottom:14px;
   }
   .qnum{ font-size:11.5px; color:var(--muted); margin-bottom:6px; font-weight:700; letter-spacing:.03em; }
-  .qtext{ font-size:16.5px; line-height:1.55; color:var(--ink); margin-bottom:16px; font-weight:600; }
+  .qtext{ font-size:16.5px; line-height:1.55; color:var(--ink); margin-bottom:16px; font-weight:600; text-align:justify; text-justify:inter-word; }
+  .qtext sup{ font-size:.72em; }
   .qimg{ width:100%; margin-bottom:16px; background:#fff; border:1px solid var(--lineD); border-radius:10px; padding:10px; }
   .qimg svg{ width:100%; height:auto; display:block; }
 
@@ -178,7 +179,8 @@
     transition:.15s;
   }
   .option.selected .letter{ background:var(--steel); border-color:var(--steel); color:#fff; }
-  .option .otext{ font-size:14.5px; line-height:1.45; padding-top:3px; }
+  .option .otext{ font-size:14.5px; line-height:1.45; padding-top:3px; text-align:justify; text-justify:inter-word; }
+  .option .otext sup{ font-size:.72em; }
 
   .likert-scale{ display:flex; gap:8px; justify-content:space-between; margin-top:10px; }
   .likert-item{ flex:1; text-align:center; }
@@ -210,6 +212,24 @@
   #screenFinish h2{ font-family:var(--serif); font-size:22px; color:var(--navy); }
   .summary-box{ width:100%; background:#fff; border:1px solid var(--lineD); border-radius:11px; padding:16px; margin:14px 0; text-align:left; font-size:12.5px; color:var(--muted); line-height:2; }
   .summary-box b{ color:var(--navy); }
+
+  /* ---------- CONFIRM MODAL ---------- */
+  .modal-overlay{
+    position:absolute; inset:0; z-index:50; display:flex; align-items:center; justify-content:center;
+    background:rgba(10,20,32,.55); padding:24px; backdrop-filter:blur(2px);
+  }
+  .modal-box{
+    width:100%; max-width:340px; background:var(--paper); border-radius:14px; padding:24px 22px;
+    box-shadow:0 20px 50px rgba(0,0,0,.4); text-align:center;
+  }
+  .modal-icon{
+    width:52px; height:52px; margin:0 auto 14px; border-radius:50%; background:rgba(232,161,61,.16);
+    display:flex; align-items:center; justify-content:center; font-size:24px; color:var(--amber);
+  }
+  .modal-box h3{ font-family:var(--serif); font-size:18px; color:var(--navy); margin:0 0 8px; }
+  .modal-box p{ font-size:12.5px; color:var(--muted); line-height:1.6; margin:0 0 20px; }
+  .modal-actions{ display:flex; gap:10px; }
+  .modal-actions .btn{ margin-top:0; }
 </style>
 </head>
 <body>
@@ -279,14 +299,26 @@
       <button class="btn amber" id="btnDownloadAgain">Unduh Ulang PDF Jawaban</button>
     </div>
 
+    <!-- CONFIRM FINISH MODAL -->
+    <div class="modal-overlay hidden" id="modalConfirm">
+      <div class="modal-box">
+        <div class="modal-icon">?</div>
+        <h3>Selesaikan Asesmen?</h3>
+        <p>Setelah menekan "Ya, Selesai", jawaban tidak dapat diubah lagi dan file PDF akan otomatis diunduh. Pastikan semua soal sudah dijawab.</p>
+        <div class="modal-actions">
+          <button class="btn secondary" id="btnCancelFinish">Tidak, Kembali</button>
+          <button class="btn" id="btnConfirmFinish">Ya, Selesai</button>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
 <script>
 /* ================= DATA SOAL ================= */
 // SVG kecil sebagai ilustrasi soal
-const svgJangka = `<svg viewBox="0 0 300 90" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="180" height="14" fill="#dfe6ee" stroke="#3a6ea5"/><rect x="190" y="20" width="12" height="34" fill="#3a6ea5"/><rect x="10" y="20" width="12" height="34" fill="#3a6ea5"/><line x1="30" y1="10" x2="30" y2="70" stroke="#1c2530"/><line x1="170" y1="10" x2="170" y2="70" stroke="#1c2530"/><text x="90" y="65" font-size="10" fill="#5c6b7a">skala utama</text><text x="200" y="65" font-size="10" fill="#5c6b7a">rahang geser</text></svg>`;
-const svgVektor = `<svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg"><line x1="30" y1="130" x2="230" y2="130" stroke="#c7cdd4"/><line x1="30" y1="130" x2="30" y2="20" stroke="#c7cdd4"/><line x1="30" y1="130" x2="150" y2="40" stroke="#3a6ea5" stroke-width="3" marker-end="url(#arrow)"/><line x1="30" y1="130" x2="200" y2="130" stroke="#e8a13d" stroke-width="3" marker-end="url(#arrow2)"/><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#3a6ea5"/></marker><marker id="arrow2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#e8a13d"/></marker></defs><text x="145" y="35" font-size="12" fill="#3a6ea5">F1 = 40 N</text><text x="150" y="145" font-size="12" fill="#e8a13d">F2 = 30 N, sudut 90&deg; thd F1</text></svg>`;
+const svgVektor = `<svg viewBox="0 0 300 170" xmlns="http://www.w3.org/2000/svg"><line x1="40" y1="140" x2="40" y2="30" stroke="#3a6ea5" stroke-width="3" marker-end="url(#arrow)"/><line x1="40" y1="140" x2="240" y2="140" stroke="#e8a13d" stroke-width="3" marker-end="url(#arrow2)"/><rect x="40" y="125" width="15" height="15" fill="none" stroke="#5c6b7a" stroke-width="1.4"/><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#3a6ea5"/></marker><marker id="arrow2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#e8a13d"/></marker></defs><text x="10" y="24" font-size="12" fill="#3a6ea5">F1 = 40 N</text><text x="130" y="160" font-size="12" fill="#e8a13d">F2 = 30 N</text></svg>`;
 const svgGLBB = `<svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg"><line x1="30" y1="130" x2="270" y2="130" stroke="#1c2530"/><line x1="30" y1="130" x2="30" y2="20" stroke="#1c2530"/><polyline points="30,130 90,110 150,80 210,40 260,10" fill="none" stroke="#3a6ea5" stroke-width="3"/><text x="230" y="150" font-size="11" fill="#5c6b7a">t (s)</text><text x="5" y="20" font-size="11" fill="#5c6b7a">v (m/s)</text></svg>`;
 const svgSegitiga = `<svg viewBox="0 0 260 160" xmlns="http://www.w3.org/2000/svg"><polygon points="30,140 230,140 230,40" fill="none" stroke="#3a6ea5" stroke-width="3"/><text x="115" y="158" font-size="12" fill="#5c6b7a">8 cm</text><text x="238" y="95" font-size="12" fill="#5c6b7a">6 cm</text><text x="110" y="85" font-size="12" fill="#5c6b7a">c ?</text></svg>`;
 const svgParabola = `<svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg"><line x1="20" y1="140" x2="280" y2="140" stroke="#1c2530"/><line x1="150" y1="140" x2="150" y2="10" stroke="#1c2530"/><path d="M40,140 Q150,-10 260,140" fill="none" stroke="#e8a13d" stroke-width="3"/><text x="245" y="155" font-size="11" fill="#5c6b7a">x</text><text x="155" y="20" font-size="11" fill="#5c6b7a">y</text></svg>`;
@@ -295,7 +327,7 @@ const svgGradien = `<svg viewBox="0 0 260 160" xmlns="http://www.w3.org/2000/svg
 let questions = [
 // ===== A. Pengetahuan Awal Kelas X (10 soal) =====
 {cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Satuan panjang dalam Sistem Internasional (SI) adalah...", options:["Sentimeter","Meter","Kilometer","Inci","Mil"]},
-{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Alat ukur pada gambar berikut biasa digunakan untuk mengukur diameter benda dengan ketelitian tinggi. Alat tersebut adalah...", img:svgJangka, options:["Mistar","Jangka sorong","Neraca pegas","Termometer","Dinamometer"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Alat ukur yang memiliki skala utama dan skala nonius (rahang geser), serta biasa digunakan untuk mengukur diameter dalam, diameter luar, atau kedalaman benda dengan ketelitian hingga 0,1 mm, adalah...", options:["Mistar","Jangka sorong","Neraca pegas","Termometer","Dinamometer"]},
 {cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Bilangan 0,000042 kg jika ditulis dalam notasi ilmiah adalah...", options:["4,2 x 10^-5 kg","4,2 x 10^5 kg","42 x 10^-6 kg","4,2 x 10^-4 kg","0,42 x 10^-4 kg"]},
 {cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Sebuah benda bergerak lurus beraturan (GLB) menempuh jarak 60 m dalam waktu 12 s. Kecepatan benda tersebut adalah...", options:["3 m/s","5 m/s","6 m/s","7,2 m/s","12 m/s"]},
 {cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Pada grafik kecepatan terhadap waktu (v-t) berikut, jenis gerak yang ditunjukkan adalah...", img:svgGLBB, options:["GLB (kecepatan tetap)","GLBB dipercepat beraturan","GLBB diperlambat beraturan","Gerak melingkar","Diam"]},
@@ -410,6 +442,14 @@ function updateTimerDisplay(){
   if(totalSeconds<=300){ timerBox.classList.add('low'); } else { timerBox.classList.remove('low'); }
 }
 
+/* ================= FORMAT NOTASI MATEMATIS ================= */
+function formatMath(str){
+  if(!str) return str;
+  // ubah pola pangkat "a^b" atau "a^-b" menjadi superscript sebenarnya (a<sup>b</sup>)
+  // b bisa berupa angka, tanda minus + angka, atau gabungan huruf/angka pendek (mis. 10^-5, v^2, m/s^2)
+  return str.replace(/\^(-?[0-9]+(?:[.,][0-9]+)?)/g, '<sup>$1</sup>');
+}
+
 /* ================= RENDER QUESTION ================= */
 function renderQuestion(){
   const q = questions[currentIndex];
@@ -417,7 +457,7 @@ function renderQuestion(){
 
   let html = `<div class="qtag">${q.cat}</div>`;
   html += `<div class="qnum">Soal ${currentIndex+1} dari ${questions.length}</div>`;
-  html += `<div class="qtext">${q.text}</div>`;
+  html += `<div class="qtext">${formatMath(q.text)}</div>`;
   if(q.img){ html += `<div class="qimg">${q.img}</div>`; }
 
   if(q.type==="mc"){
@@ -426,7 +466,7 @@ function renderQuestion(){
       const selected = answers[currentIndex]===letter ? "selected" : "";
       html += `<div class="option ${selected}" data-val="${letter}">
         <div class="letter">${letter}</div>
-        <div class="otext">${opt}</div>
+        <div class="otext">${formatMath(opt)}</div>
       </div>`;
     });
   } else if(q.type==="likert"){
@@ -464,13 +504,26 @@ function renderQuestion(){
 btnPrev.addEventListener('click', ()=>{
   if(currentIndex>0){ currentIndex--; renderQuestion(); }
 });
+const modalConfirm = document.getElementById('modalConfirm');
+const btnCancelFinish = document.getElementById('btnCancelFinish');
+const btnConfirmFinish = document.getElementById('btnConfirmFinish');
+
 btnNext.addEventListener('click', ()=>{
   if(currentIndex<questions.length-1){
     currentIndex++;
     renderQuestion();
   } else {
-    finishTest(false);
+    modalConfirm.classList.remove('hidden');
   }
+});
+
+btnCancelFinish.addEventListener('click', ()=>{
+  modalConfirm.classList.add('hidden');
+});
+
+btnConfirmFinish.addEventListener('click', ()=>{
+  modalConfirm.classList.add('hidden');
+  finishTest(false);
 });
 
 /* ================= FINISH & DOWNLOAD ================= */
