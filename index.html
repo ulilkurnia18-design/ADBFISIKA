@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ADB Fisika</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --void:#0a1420;
+    --deep:#0f1c30;
+    --panel:#132540;
+    --panel2:#0d1a2e;
+    --cyan:#5fd4d6;
+    --steel:#2d6e7e;
+    --steel-dark:#1f4d59;
+    --navy:#132a45;
+    --navy2:#274a6b;
+    --amber:#e8a13d;
+    --coral:#ef7b5f;
+    --paper:#f8f4e8;
+    --ink:#1b2230;
+    --muted:#7a8699;
+    --muted2:#aab4c4;
+    --line:rgba(27,41,58,.14);
+    --lineD:#dcd5c2;
+    --good:#3f9e78;
+    --bad:#d9534f;
+    --serif:'Iowan Old Style','Palatino Linotype',Georgia,'Times New Roman',serif;
+    --sans:'Segoe UI',system-ui,Arial,sans-serif;
+    --mono:'SFMono-Regular',Consolas,'Courier New',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;background:var(--void);font-family:var(--sans);color:var(--ink);}
+  #app{
+    width:100%;
+    height:100vh;
+    height:100dvh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 20% 15%, rgba(95,212,214,.12), transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(232,161,61,.10), transparent 50%),
+      var(--void);
+  }
+  .frame{
+    position:relative;
+    width:100%;
+    max-width:520px;
+    height:100%;
+    max-height:calc(520px * 9 / 16 * 2.05);
+    background:var(--paper);
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    border-radius:18px;
+    box-shadow:0 0 60px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.06), 0 30px 80px rgba(0,0,0,.45);
+  }
+  @media (min-aspect-ratio: 9/16){
+    .frame{ max-height:100vh; }
+  }
+  /* graph-paper texture on the paper screens */
+  .screen{
+    background-image:
+      linear-gradient(rgba(27,34,48,.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(27,34,48,.05) 1px, transparent 1px);
+    background-size:22px 22px;
+  }
+
+  /* ---------- LOADING ---------- */
+  .screen{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    padding:32px;
+    background:var(--paper);
+    text-align:center;
+  }
+  .hidden{display:none !important;}
+  .brand{
+    font-size:12px; letter-spacing:.32em; color:var(--steel-dark); font-weight:700; text-transform:uppercase;
+  }
+  .brand-title{
+    font-family:var(--serif); font-size:34px; font-weight:700; color:var(--navy); margin:12px 0 4px; letter-spacing:-0.01em;
+  }
+  .brand-sub{ font-size:12.5px; color:var(--muted); margin-bottom:26px; letter-spacing:.01em;}
+  .orbit-wrap{ position:relative; width:96px; height:96px; margin-bottom:22px; }
+  .orbit-wrap .nucleus{
+    position:absolute; top:50%; left:50%; width:12px; height:12px; margin:-6px 0 0 -6px;
+    border-radius:50%; background:var(--amber); box-shadow:0 0 12px rgba(232,161,61,.7);
+  }
+  .orbit{
+    position:absolute; inset:0; border:1.5px solid var(--steel); border-radius:50%; opacity:.55;
+  }
+  .orbit.o2{ transform:rotate(60deg); }
+  .orbit.o3{ transform:rotate(-60deg); }
+  .orbit .electron{
+    position:absolute; width:7px; height:7px; border-radius:50%; background:var(--steel); top:-3.5px; left:50%; margin-left:-3.5px;
+  }
+  .orbit.o1{ animation:spin 4s linear infinite; }
+  .orbit.o2{ animation:spin 5.5s linear infinite reverse; }
+  .orbit.o3{ animation:spin 3.2s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+  .orbit.o2{ animation:spin2 5.5s linear infinite reverse; }
+  @keyframes spin2{ to{ transform:rotate(420deg); } }
+  .orbit.o3{ animation:spin3 3.2s linear infinite; }
+  @keyframes spin3{ to{ transform:rotate(-300deg); } }
+  .loader-bar{
+    width:70%; max-width:220px; height:6px; background:var(--line); border-radius:4px; overflow:hidden;
+  }
+  .loader-fill{
+    height:100%; width:0%; background:linear-gradient(90deg,var(--steel),var(--amber)); border-radius:4px;
+    animation:load 1.8s ease forwards;
+  }
+  @keyframes load{ to{width:100%;} }
+
+  /* ---------- FORM ---------- */
+  .form-box{ width:100%; }
+  .form-box h2{ font-family:var(--serif); font-size:22px; color:var(--navy); margin:0 0 6px; }
+  .form-box p.desc{ font-size:12.5px; color:var(--muted); margin:0 0 22px; line-height:1.6; }
+  .field{ text-align:left; margin-bottom:16px; }
+  .field label{ display:block; font-size:11.5px; font-weight:700; color:var(--navy2); margin-bottom:6px; text-transform:uppercase; letter-spacing:.06em;}
+  .field input{
+    width:100%; padding:12px 14px; border:1.5px solid var(--lineD); border-radius:8px; font-size:15px; background:#fff; color:var(--ink);
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .field input:focus{ outline:none; border-color:var(--steel); box-shadow:0 0 0 3px rgba(45,110,126,.14); }
+  .err-msg{ font-size:11.5px; color:var(--bad); margin-top:4px; display:none; }
+  .btn{
+    display:inline-block; width:100%; padding:14px; border:none; border-radius:9px;
+    background:var(--navy); color:#fff; font-size:15px; font-weight:700; letter-spacing:.02em;
+    cursor:pointer; margin-top:8px; transition:transform .12s, box-shadow .12s;
+    box-shadow:0 6px 16px rgba(19,42,69,.28);
+  }
+  .btn:active{ transform:scale(.98); }
+  .btn.secondary{ background:transparent; color:var(--navy); border:1.5px solid var(--navy); box-shadow:none; }
+  .btn.amber{ background:var(--amber); color:var(--navy); box-shadow:0 6px 16px rgba(232,161,61,.3); }
+  .info-note{ font-size:11px; color:var(--muted); margin-top:18px; line-height:1.6; border-top:1px dashed var(--lineD); padding-top:14px;}
+
+  /* ---------- TEST HEADER ---------- */
+  .test-wrap{ position:absolute; inset:0; display:none; flex-direction:column; }
+  .test-wrap.active{ display:flex; }
+  .topbar{
+    background:linear-gradient(135deg,var(--navy),var(--steel-dark)); color:#fff; padding:11px 16px; display:flex; align-items:center; justify-content:space-between; flex-shrink:0;
+  }
+  .topbar .tname{ font-size:11px; opacity:.85; }
+  .topbar .tname b{ color:var(--amber); }
+  .timer{
+    font-variant-numeric:tabular-nums; font-size:16px; font-weight:800; background:rgba(255,255,255,.14); padding:5px 12px; border-radius:20px;
+  }
+  .timer.low{ background:var(--bad); animation:pulse 1s infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.55;} }
+  .progress-outer{ height:5px; background:var(--line); flex-shrink:0; }
+  .progress-inner{ height:100%; background:linear-gradient(90deg,var(--steel),var(--cyan)); transition:width .3s; }
+
+  /* ---------- QUESTION AREA ---------- */
+  .qarea{ flex:1; overflow-y:auto; padding:22px 18px 108px; }
+  .qtag{
+    display:inline-block; font-size:10px; font-weight:800; letter-spacing:.08em; text-transform:uppercase;
+    color:#fff; background:linear-gradient(135deg,var(--steel),var(--steel-dark)); padding:5px 11px; border-radius:20px; margin-bottom:14px;
+  }
+  .qnum{ font-size:11.5px; color:var(--muted); margin-bottom:6px; font-weight:700; letter-spacing:.03em; }
+  .qtext{ font-size:16.5px; line-height:1.55; color:var(--ink); margin-bottom:16px; font-weight:600; }
+  .qimg{ width:100%; margin-bottom:16px; background:#fff; border:1px solid var(--lineD); border-radius:10px; padding:10px; }
+  .qimg svg{ width:100%; height:auto; display:block; }
+
+  .option{
+    display:flex; align-items:flex-start; gap:11px; background:#fff; border:1.5px solid var(--lineD);
+    border-radius:11px; padding:13px 14px; margin-bottom:10px; cursor:pointer; transition:.15s;
+  }
+  .option:active{ transform:scale(.99); }
+  .option.selected{ border-color:var(--steel); background:#eaf3f2; box-shadow:0 2px 10px rgba(45,110,126,.14); }
+  .option .letter{
+    flex-shrink:0; width:26px; height:26px; border-radius:50%; border:1.5px solid var(--lineD); background:#f6f3ec;
+    display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:var(--navy);
+    transition:.15s;
+  }
+  .option.selected .letter{ background:var(--steel); border-color:var(--steel); color:#fff; }
+  .option .otext{ font-size:14.5px; line-height:1.45; padding-top:3px; }
+
+  .likert-scale{ display:flex; gap:8px; justify-content:space-between; margin-top:10px; }
+  .likert-item{ flex:1; text-align:center; }
+  .likert-circle{
+    width:100%; aspect-ratio:1/1; border-radius:50%; border:1.5px solid var(--lineD); background:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:800; font-size:15px; cursor:pointer; color:var(--navy);
+    transition:.15s;
+  }
+  .likert-circle.selected{ background:var(--steel); border-color:var(--steel); color:#fff; box-shadow:0 2px 10px rgba(45,110,126,.25); }
+  .likert-label{ font-size:9.5px; color:var(--muted); margin-top:6px; line-height:1.3; }
+
+  .navbar{
+    position:absolute; bottom:0; left:0; right:0; background:#fff; border-top:1px solid var(--lineD);
+    padding:10px 16px; display:flex; gap:10px;
+  }
+  .navbtn{
+    flex:1; padding:13px; border-radius:9px; border:none; font-size:14px; font-weight:700; cursor:pointer; transition:transform .12s;
+  }
+  .navbtn:active{ transform:scale(.98); }
+  .navbtn.prev{ background:#eef1f4; color:var(--navy); }
+  .navbtn.next{ background:var(--navy); color:#fff; }
+  .navbtn:disabled{ opacity:.4; }
+
+  /* ---------- FINISH ---------- */
+  .finish-icon{
+    width:64px; height:64px; border-radius:50%; margin-bottom:16px; background:linear-gradient(135deg,var(--steel),var(--good));
+    display:flex; align-items:center; justify-content:center; color:#fff; font-size:30px; box-shadow:0 8px 24px rgba(63,158,120,.35);
+  }
+  #screenFinish h2{ font-family:var(--serif); font-size:22px; color:var(--navy); }
+  .summary-box{ width:100%; background:#fff; border:1px solid var(--lineD); border-radius:11px; padding:16px; margin:14px 0; text-align:left; font-size:12.5px; color:var(--muted); line-height:2; }
+  .summary-box b{ color:var(--navy); }
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="frame">
+
+    <!-- LOADING -->
+    <div class="screen" id="screenLoading">
+      <div class="orbit-wrap">
+        <div class="nucleus"></div>
+        <div class="orbit o1"><div class="electron"></div></div>
+        <div class="orbit o2"><div class="electron"></div></div>
+        <div class="orbit o3"><div class="electron"></div></div>
+      </div>
+      <div class="brand">Asesmen Diagnostik</div>
+      <div class="brand-title">ADB Fisika</div>
+      <div class="brand-sub">Kelas XI &middot; Menyiapkan asesmen...</div>
+      <div class="loader-bar"><div class="loader-fill"></div></div>
+    </div>
+
+    <!-- FORM -->
+    <div class="screen hidden" id="screenForm">
+      <div class="form-box">
+        <div class="brand">ADB Fisika</div>
+        <h2>Data Peserta</h2>
+        <p class="desc">Asesmen Diagnostik Berjenjang ini terdiri dari 30 soal dengan waktu pengerjaan 75 menit. Isi data berikut sebelum memulai.</p>
+        <div class="field">
+          <label>Nama Lengkap</label>
+          <input type="text" id="inpNama" placeholder="Tulis nama lengkap">
+          <div class="err-msg" id="errNama">Nama wajib diisi.</div>
+        </div>
+        <div class="field">
+          <label>Kelas</label>
+          <input type="text" id="inpKelas" placeholder="Contoh: XI-1">
+          <div class="err-msg" id="errKelas">Kelas wajib diisi.</div>
+        </div>
+        <button class="btn" id="btnStart">Mulai Asesmen</button>
+        <div class="info-note">Setelah waktu habis atau menekan tombol Selesai, jawaban akan otomatis terunduh sebagai file PDF. Pastikan perangkat mengizinkan pengunduhan file.</div>
+      </div>
+    </div>
+
+    <!-- TEST -->
+    <div class="test-wrap" id="testWrap">
+      <div class="topbar">
+        <div class="tname">Peserta: <b id="topName">-</b></div>
+        <div class="timer" id="timerBox">75:00</div>
+      </div>
+      <div class="progress-outer"><div class="progress-inner" id="progressBar"></div></div>
+      <div class="qarea" id="qArea"></div>
+      <div class="navbar">
+        <button class="navbtn prev" id="btnPrev">Sebelumnya</button>
+        <button class="navbtn next" id="btnNext">Berikutnya</button>
+      </div>
+    </div>
+
+    <!-- FINISH -->
+    <div class="screen hidden" id="screenFinish">
+      <div class="finish-icon">✓</div>
+      <h2>Asesmen Selesai</h2>
+      <p class="desc">Terima kasih, jawaban kamu telah tersimpan. File hasil akan otomatis terunduh ke perangkatmu.</p>
+      <div class="summary-box">
+        Nama: <b id="sumNama">-</b><br>
+        Kelas: <b id="sumKelas">-</b><br>
+        Soal dijawab: <b id="sumAnswered">0</b> / <b id="sumTotal">0</b><br>
+        Waktu digunakan: <b id="sumTime">-</b>
+      </div>
+      <button class="btn amber" id="btnDownloadAgain">Unduh Ulang PDF Jawaban</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ================= DATA SOAL ================= */
+// SVG kecil sebagai ilustrasi soal
+const svgJangka = `<svg viewBox="0 0 300 90" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="30" width="180" height="14" fill="#dfe6ee" stroke="#3a6ea5"/><rect x="190" y="20" width="12" height="34" fill="#3a6ea5"/><rect x="10" y="20" width="12" height="34" fill="#3a6ea5"/><line x1="30" y1="10" x2="30" y2="70" stroke="#1c2530"/><line x1="170" y1="10" x2="170" y2="70" stroke="#1c2530"/><text x="90" y="65" font-size="10" fill="#5c6b7a">skala utama</text><text x="200" y="65" font-size="10" fill="#5c6b7a">rahang geser</text></svg>`;
+const svgVektor = `<svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg"><line x1="30" y1="130" x2="230" y2="130" stroke="#c7cdd4"/><line x1="30" y1="130" x2="30" y2="20" stroke="#c7cdd4"/><line x1="30" y1="130" x2="150" y2="40" stroke="#3a6ea5" stroke-width="3" marker-end="url(#arrow)"/><line x1="30" y1="130" x2="200" y2="130" stroke="#e8a13d" stroke-width="3" marker-end="url(#arrow2)"/><defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#3a6ea5"/></marker><marker id="arrow2" markerWidth="8" markerHeight="8" refX="4" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#e8a13d"/></marker></defs><text x="145" y="35" font-size="12" fill="#3a6ea5">F1 = 40 N</text><text x="150" y="145" font-size="12" fill="#e8a13d">F2 = 30 N, sudut 90&deg; thd F1</text></svg>`;
+const svgGLBB = `<svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg"><line x1="30" y1="130" x2="270" y2="130" stroke="#1c2530"/><line x1="30" y1="130" x2="30" y2="20" stroke="#1c2530"/><polyline points="30,130 90,110 150,80 210,40 260,10" fill="none" stroke="#3a6ea5" stroke-width="3"/><text x="230" y="150" font-size="11" fill="#5c6b7a">t (s)</text><text x="5" y="20" font-size="11" fill="#5c6b7a">v (m/s)</text></svg>`;
+const svgSegitiga = `<svg viewBox="0 0 260 160" xmlns="http://www.w3.org/2000/svg"><polygon points="30,140 230,140 230,40" fill="none" stroke="#3a6ea5" stroke-width="3"/><text x="115" y="158" font-size="12" fill="#5c6b7a">8 cm</text><text x="238" y="95" font-size="12" fill="#5c6b7a">6 cm</text><text x="110" y="85" font-size="12" fill="#5c6b7a">c ?</text></svg>`;
+const svgParabola = `<svg viewBox="0 0 300 160" xmlns="http://www.w3.org/2000/svg"><line x1="20" y1="140" x2="280" y2="140" stroke="#1c2530"/><line x1="150" y1="140" x2="150" y2="10" stroke="#1c2530"/><path d="M40,140 Q150,-10 260,140" fill="none" stroke="#e8a13d" stroke-width="3"/><text x="245" y="155" font-size="11" fill="#5c6b7a">x</text><text x="155" y="20" font-size="11" fill="#5c6b7a">y</text></svg>`;
+const svgGradien = `<svg viewBox="0 0 260 160" xmlns="http://www.w3.org/2000/svg"><line x1="20" y1="140" x2="240" y2="140" stroke="#c7cdd4"/><line x1="20" y1="140" x2="20" y2="10" stroke="#c7cdd4"/><line x1="20" y1="120" x2="200" y2="30" stroke="#3a6ea5" stroke-width="3"/><text x="60" y="150" font-size="11" fill="#5c6b7a">titik (0,2) dan (4,10)</text></svg>`;
+
+let questions = [
+// ===== A. Pengetahuan Awal Kelas X (10 soal) =====
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Satuan panjang dalam Sistem Internasional (SI) adalah...", options:["Sentimeter","Meter","Kilometer","Inci","Mil"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Alat ukur pada gambar berikut biasa digunakan untuk mengukur diameter benda dengan ketelitian tinggi. Alat tersebut adalah...", img:svgJangka, options:["Mistar","Jangka sorong","Neraca pegas","Termometer","Dinamometer"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Bilangan 0,000042 kg jika ditulis dalam notasi ilmiah adalah...", options:["4,2 x 10^-5 kg","4,2 x 10^5 kg","42 x 10^-6 kg","4,2 x 10^-4 kg","0,42 x 10^-4 kg"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Sebuah benda bergerak lurus beraturan (GLB) menempuh jarak 60 m dalam waktu 12 s. Kecepatan benda tersebut adalah...", options:["3 m/s","5 m/s","6 m/s","7,2 m/s","12 m/s"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Pada grafik kecepatan terhadap waktu (v-t) berikut, jenis gerak yang ditunjukkan adalah...", img:svgGLBB, options:["GLB (kecepatan tetap)","GLBB dipercepat beraturan","GLBB diperlambat beraturan","Gerak melingkar","Diam"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Menurut Hukum I Newton, suatu benda akan tetap diam atau bergerak lurus beraturan jika...", options:["Gaya yang bekerja besar","Resultan gaya yang bekerja sama dengan nol","Benda memiliki massa besar","Benda berada di ruang hampa","Kecepatan benda nol"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Usaha (kerja) dalam fisika didefinisikan sebagai...", options:["Hasil kali massa dan percepatan","Hasil kali gaya dan perpindahan searah gaya","Hasil bagi gaya dengan waktu","Hasil kali massa dan kecepatan","Hasil kali tekanan dan volume"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Suhu 37°C jika dikonversi ke skala Fahrenheit adalah...", options:["66,6°F","77°F","98,6°F","100°F","37°F"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Hubungan antara periode (T) dan frekuensi (f) suatu gelombang dinyatakan dengan...", options:["T = f","T = 1/f","T = f^2","T = 2f","T = f/2"]},
+{cat:"Pengetahuan Awal Kelas X", type:"mc", text:"Dua buah vektor gaya segaris dan searah masing-masing 5 N dan 8 N. Resultan kedua gaya tersebut adalah...", options:["3 N","8 N","13 N","40 N","5 N"]},
+
+// ===== B. Matematika Dasar untuk Fisika XI (10 soal) =====
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Nilai dari sin 30° adalah...", options:["0","1/2","1/2 akar 2","1/2 akar 3","1"]},
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Perhatikan segitiga siku-siku berikut. Panjang sisi miring (c) menggunakan Teorema Pythagoras adalah...", img:svgSegitiga, options:["7 cm","8 cm","9 cm","10 cm","14 cm"]},
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Jika v = v0 + a.t, dengan v0 = 4 m/s, a = 2 m/s^2, dan t = 5 s, maka nilai v adalah...", options:["10 m/s","12 m/s","14 m/s","20 m/s","24 m/s"]},
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Akar-akar dari persamaan kuadrat x^2 - 5x + 6 = 0 adalah...", options:["1 dan 6","2 dan 3","-2 dan -3","1 dan 5","3 dan 6"]},
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Sebuah garis melalui titik (0,2) dan (4,10) seperti pada gambar. Gradien garis tersebut adalah...", img:svgGradien, options:["1","2","3","4","8"]},
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Perhatikan diagram vektor berikut. Jika F1 dan F2 saling tegak lurus, besar resultan F1 dan F2 menggunakan Pythagoras adalah...", img:svgVektor, options:["10 N","35 N","50 N","70 N","2100 N"]},
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Cos 60° memiliki nilai yang sama dengan...", options:["Sin 30°","Sin 60°","Tan 45°","Cos 90°","Sin 90°"]},
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Jarak tempuh 5 km jika dikonversi ke satuan meter adalah...", options:["50 m","500 m","5.000 m","50.000 m","0,5 m"]},
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Jika skala peta 1:100.000, maka jarak 3 cm pada peta mewakili jarak sebenarnya sejauh...", options:["300 m","3.000 m","30.000 m","300.000 m","3 m"]},
+{cat:"Matematika Dasar Fisika", type:"mc", text:"Grafik fungsi kuadrat y = -x^2 + 4 seperti pada gambar berikut umumnya digunakan untuk menggambarkan lintasan gerak...", img:svgParabola, options:["Gerak lurus beraturan","Gerak melingkar beraturan","Gerak parabola (peluru)","Gerak harmonik sederhana","Gerak vertikal ke bawah saja"]},
+
+// ===== C. Minat Belajar Fisika (5 soal likert) =====
+{cat:"Minat Belajar Fisika", type:"likert", text:"Saya merasa tertarik dan antusias ketika belajar materi Fisika."},
+{cat:"Minat Belajar Fisika", type:"likert", text:"Saya senang mencari tahu lebih jauh tentang fenomena fisika di kehidupan sehari-hari."},
+{cat:"Minat Belajar Fisika", type:"likert", text:"Saya merasa bosan atau tidak bersemangat saat pelajaran Fisika berlangsung."},
+{cat:"Minat Belajar Fisika", type:"likert", text:"Saya bersedia mengerjakan soal atau latihan Fisika tambahan di luar jam sekolah."},
+{cat:"Minat Belajar Fisika", type:"likert", text:"Saya merasa Fisika adalah pelajaran yang menarik untuk masa depan saya."},
+
+// ===== D. Daya Dukung Belajar Fisika (5 soal likert) =====
+{cat:"Daya Dukung Belajar Fisika", type:"likert", text:"Saya memiliki akses buku, modul, atau internet yang memadai untuk belajar Fisika."},
+{cat:"Daya Dukung Belajar Fisika", type:"likert", text:"Orang tua atau keluarga saya mendukung dan memberi fasilitas belajar Fisika di rumah."},
+{cat:"Daya Dukung Belajar Fisika", type:"likert", text:"Sekolah saya memiliki alat atau laboratorium yang mendukung praktik Fisika."},
+{cat:"Daya Dukung Belajar Fisika", type:"likert", text:"Saya memiliki waktu belajar yang cukup di rumah untuk mempelajari Fisika."},
+{cat:"Daya Dukung Belajar Fisika", type:"likert", text:"Guru Fisika saya menjelaskan materi dengan cara yang mudah saya pahami."},
+];
+
+// tambahkan nomor asli & acak urutan tampil (soal tetap proporsional karena jumlah per kategori sudah tetap)
+questions.forEach((q,i)=>q.origIndex=i+1);
+function shuffleArray(arr){
+  for(let i=arr.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [arr[i],arr[j]]=[arr[j],arr[i]];
+  }
+  return arr;
+}
+questions = shuffleArray(questions);
+
+const likertLabels = ["Sangat Tidak Setuju","Tidak Setuju","Netral","Setuju","Sangat Setuju"];
+const optionLetters = ["A","B","C","D","E"];
+
+/* ================= STATE ================= */
+let studentName = "";
+let studentClass = "";
+let currentIndex = 0;
+let answers = new Array(questions.length).fill(null);
+let totalSeconds = 75*60;
+let timerInterval = null;
+let startTimeStamp = null;
+let finished = false;
+
+/* ================= ELEMENTS ================= */
+const screenLoading = document.getElementById('screenLoading');
+const screenForm = document.getElementById('screenForm');
+const testWrap = document.getElementById('testWrap');
+const screenFinish = document.getElementById('screenFinish');
+const qArea = document.getElementById('qArea');
+const timerBox = document.getElementById('timerBox');
+const progressBar = document.getElementById('progressBar');
+const topName = document.getElementById('topName');
+const btnPrev = document.getElementById('btnPrev');
+const btnNext = document.getElementById('btnNext');
+
+/* ================= LOADING -> FORM ================= */
+setTimeout(()=>{
+  screenLoading.classList.add('hidden');
+  screenForm.classList.remove('hidden');
+},1800);
+
+document.getElementById('btnStart').addEventListener('click', ()=>{
+  const nama = document.getElementById('inpNama').value.trim();
+  const kelas = document.getElementById('inpKelas').value.trim();
+  let ok = true;
+  if(!nama){ document.getElementById('errNama').style.display='block'; ok=false; } else { document.getElementById('errNama').style.display='none'; }
+  if(!kelas){ document.getElementById('errKelas').style.display='block'; ok=false; } else { document.getElementById('errKelas').style.display='none'; }
+  if(!ok) return;
+  studentName = nama;
+  studentClass = kelas;
+  topName.textContent = nama;
+  screenForm.classList.add('hidden');
+  testWrap.classList.add('active');
+  startTimeStamp = Date.now();
+  renderQuestion();
+  startTimer();
+});
+
+/* ================= TIMER ================= */
+function startTimer(){
+  updateTimerDisplay();
+  timerInterval = setInterval(()=>{
+    totalSeconds--;
+    updateTimerDisplay();
+    if(totalSeconds<=0){
+      clearInterval(timerInterval);
+      finishTest(true);
+    }
+  },1000);
+}
+function updateTimerDisplay(){
+  const m = Math.floor(totalSeconds/60);
+  const s = totalSeconds%60;
+  timerBox.textContent = String(m).padStart(2,'0')+":"+String(s).padStart(2,'0');
+  if(totalSeconds<=300){ timerBox.classList.add('low'); } else { timerBox.classList.remove('low'); }
+}
+
+/* ================= RENDER QUESTION ================= */
+function renderQuestion(){
+  const q = questions[currentIndex];
+  progressBar.style.width = ((currentIndex+1)/questions.length*100)+"%";
+
+  let html = `<div class="qtag">${q.cat}</div>`;
+  html += `<div class="qnum">Soal ${currentIndex+1} dari ${questions.length}</div>`;
+  html += `<div class="qtext">${q.text}</div>`;
+  if(q.img){ html += `<div class="qimg">${q.img}</div>`; }
+
+  if(q.type==="mc"){
+    q.options.forEach((opt,i)=>{
+      const letter = optionLetters[i];
+      const selected = answers[currentIndex]===letter ? "selected" : "";
+      html += `<div class="option ${selected}" data-val="${letter}">
+        <div class="letter">${letter}</div>
+        <div class="otext">${opt}</div>
+      </div>`;
+    });
+  } else if(q.type==="likert"){
+    html += `<div class="likert-scale">`;
+    for(let i=1;i<=5;i++){
+      const selected = answers[currentIndex]===i ? "selected" : "";
+      html += `<div class="likert-item">
+        <div class="likert-circle ${selected}" data-val="${i}">${i}</div>
+        <div class="likert-label">${likertLabels[i-1]}</div>
+      </div>`;
+    }
+    html += `</div>`;
+  }
+
+  qArea.innerHTML = html;
+  qArea.scrollTop = 0;
+
+  qArea.querySelectorAll('.option').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      answers[currentIndex] = el.getAttribute('data-val');
+      renderQuestion();
+    });
+  });
+  qArea.querySelectorAll('.likert-circle').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      answers[currentIndex] = parseInt(el.getAttribute('data-val'));
+      renderQuestion();
+    });
+  });
+
+  btnPrev.disabled = currentIndex===0;
+  btnNext.textContent = currentIndex===questions.length-1 ? "Selesai" : "Berikutnya";
+}
+
+btnPrev.addEventListener('click', ()=>{
+  if(currentIndex>0){ currentIndex--; renderQuestion(); }
+});
+btnNext.addEventListener('click', ()=>{
+  if(currentIndex<questions.length-1){
+    currentIndex++;
+    renderQuestion();
+  } else {
+    finishTest(false);
+  }
+});
+
+/* ================= FINISH & DOWNLOAD ================= */
+function finishTest(autoFinish){
+  if(finished) return;
+  finished = true;
+  clearInterval(timerInterval);
+  testWrap.classList.remove('active');
+  screenFinish.classList.remove('hidden');
+
+  const answeredCount = answers.filter(a=>a!==null && a!==undefined).length;
+  const usedSeconds = 75*60 - totalSeconds;
+  const usedMin = Math.floor(usedSeconds/60);
+  const usedSec = usedSeconds%60;
+
+  document.getElementById('sumNama').textContent = studentName;
+  document.getElementById('sumKelas').textContent = studentClass;
+  document.getElementById('sumAnswered').textContent = answeredCount;
+  document.getElementById('sumTotal').textContent = questions.length;
+  document.getElementById('sumTime').textContent = usedMin+" menit "+usedSec+" detik" + (autoFinish? " (waktu habis, dikirim otomatis)":"");
+
+  downloadAnswerFile();
+}
+
+document.getElementById('btnDownloadAgain').addEventListener('click', downloadAnswerFile);
+
+function downloadAnswerFile(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit:"pt", format:"a4" });
+
+  const now = new Date();
+  const tanggal = now.toLocaleDateString('id-ID',{day:'2-digit',month:'long',year:'numeric'});
+  const jam = now.toLocaleTimeString('id-ID');
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const pageH = doc.internal.pageSize.getHeight();
+  const marginX = 48;
+  const contentW = pageW - marginX*2;
+  let y = 0;
+
+  const navy = [19,42,69];
+  const steel = [45,110,126];
+  const muted = [110,122,140];
+  const ink = [27,34,48];
+  const line = [220,213,194];
+
+  function drawHeader(){
+    doc.setFillColor(navy[0],navy[1],navy[2]);
+    doc.rect(0,0,pageW,64,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(14);
+    doc.text("LEMBAR JAWABAN — ADB FISIKA", marginX, 30);
+    doc.setFont("helvetica","normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(232,161,61);
+    doc.text("Asesmen Diagnostik Berjenjang · Kelas XI", marginX, 46);
+    y = 90;
+  }
+  function drawFooter(){
+    const pageCount = doc.internal.getNumberOfPages();
+    for(let i=1;i<=pageCount;i++){
+      doc.setPage(i);
+      doc.setDrawColor(line[0],line[1],line[2]);
+      doc.setLineWidth(0.6);
+      doc.line(marginX, pageH-38, pageW-marginX, pageH-38);
+      doc.setFont("helvetica","normal");
+      doc.setFontSize(8.5);
+      doc.setTextColor(muted[0],muted[1],muted[2]);
+      doc.text("Dokumen dibuat otomatis oleh sistem ADB Fisika", marginX, pageH-24);
+      doc.text("Hal. "+i+" / "+pageCount, pageW-marginX, pageH-24, {align:"right"});
+    }
+  }
+  function ensureSpace(h){
+    if(y + h > pageH - 55){
+      doc.addPage();
+      drawHeader();
+    }
+  }
+  function sectionTitle(text){
+    ensureSpace(30);
+    doc.setFillColor(steel[0],steel[1],steel[2]);
+    doc.roundedRect(marginX, y-12, contentW, 22, 4, 4, 'F');
+    doc.setTextColor(255,255,255);
+    doc.setFont("helvetica","bold");
+    doc.setFontSize(10.5);
+    doc.text(text.toUpperCase(), marginX+10, y+3);
+    y += 26;
+  }
+
+  drawHeader();
+
+  // Info peserta
+  doc.setTextColor(ink[0],ink[1],ink[2]);
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(10.5);
+  const infoLeft = [
+    ["Nama Peserta", studentName],
+    ["Kelas", studentClass],
+  ];
+  const infoRight = [
+    ["Tanggal", tanggal],
+    ["Waktu Selesai", jam],
+  ];
+  const answeredCount = answers.filter(a=>a!==null && a!==undefined).length;
+  const infoLeft2 = [
+    ["Jumlah Soal", String(questions.length)],
+    ["Soal Dijawab", answeredCount+" / "+questions.length],
+  ];
+
+  function infoRow(label, value, x){
+    doc.setFont("helvetica","bold");
+    doc.setTextColor(navy[0],navy[1],navy[2]);
+    doc.text(label+" :", x, y);
+    doc.setFont("helvetica","normal");
+    doc.setTextColor(ink[0],ink[1],ink[2]);
+    doc.text(String(value), x+95, y);
+  }
+  infoRow(infoLeft[0][0], infoLeft[0][1], marginX);
+  infoRow(infoRight[0][0], infoRight[0][1], marginX+contentW/2);
+  y += 18;
+  infoRow(infoLeft[1][0], infoLeft[1][1], marginX);
+  infoRow(infoRight[1][0], infoRight[1][1], marginX+contentW/2);
+  y += 18;
+  infoRow(infoLeft2[0][0], infoLeft2[0][1], marginX);
+  infoRow(infoLeft2[1][0], infoLeft2[1][1], marginX+contentW/2);
+  y += 28;
+
+  const kategoriUrut = ["Pengetahuan Awal Kelas X","Matematika Dasar Fisika","Minat Belajar Fisika","Daya Dukung Belajar Fisika"];
+
+  kategoriUrut.forEach(kat=>{
+    sectionTitle(kat);
+    let no=1;
+    questions.forEach((q,idx)=>{
+      if(q.cat===kat){
+        const jawaban = answers[idx];
+        let jawabText = "Tidak dijawab";
+        if(q.type==="mc" && jawaban){
+          const optIdx = optionLetters.indexOf(jawaban);
+          jawabText = jawaban + ". " + q.options[optIdx];
+        } else if(q.type==="likert" && jawaban){
+          jawabText = jawaban + " - " + likertLabels[jawaban-1];
+        }
+
+        const qLines = doc.splitTextToSize(no+". "+q.text, contentW-4);
+        const aLines = doc.splitTextToSize("Jawaban: "+jawabText, contentW-14);
+        const blockH = qLines.length*13 + aLines.length*12.5 + 12;
+        ensureSpace(blockH);
+
+        doc.setFont("helvetica","bold");
+        doc.setFontSize(10);
+        doc.setTextColor(ink[0],ink[1],ink[2]);
+        doc.text(qLines, marginX, y);
+        y += qLines.length*13 + 3;
+
+        doc.setFont("helvetica","italic");
+        doc.setFontSize(9.5);
+        doc.setTextColor(steel[0],steel[1],steel[2]);
+        doc.text(aLines, marginX+10, y);
+        y += aLines.length*12.5 + 9;
+
+        no++;
+      }
+    });
+    y += 6;
+  });
+
+  drawFooter();
+
+  const safeNama = studentName.replace(/[^a-zA-Z0-9]+/g,"_");
+  const safeKelas = studentClass.replace(/[^a-zA-Z0-9]+/g,"_");
+  doc.save("ADB_Fisika_"+safeNama+"_"+safeKelas+".pdf");
+}
+
+window.addEventListener('beforeunload', function(e){
+  if(!finished){
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+</script>
+</body>
+</html>
